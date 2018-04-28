@@ -17,6 +17,8 @@
 #include "catalog/table_catalog.h"
 #include "concurrency/transaction_context.h"
 #include "expression/expression_util.h"
+#include "expression/tuple_value_expression.h"
+#include "expression/comparison_expression.h"
 #include "optimizer/operator_expression.h"
 #include "optimizer/properties.h"
 #include "planner/aggregate_plan.h"
@@ -79,10 +81,23 @@ void PlanGenerator::Visit(const PhysicalSeqScan *op) {
   auto predicate = GeneratePredicateForScan(
       expression::ExpressionUtil::JoinAnnotatedExprs(op->predicates),
       op->table_alias, op->table_);
+
+  // Convert SIMD AnnotatedExpression vector back to AbstractExpression
+  std::vector<std::unique_ptr<expression::AbstractExpression>> simd_predicates;
+  for (size_t i = 0; i < op->simd_predicates_.size(); ++i) {
+    simd_predicates.emplace_back(GeneratePredicateForScan(op->simd_predicates_[i].expr, op->table_alias, op->table_));
+  }
+
+  // Combine non-SIMD predicates back to a single predicate
+  auto non_simd_predicate = GeneratePredicateForScan(
+      expression::ExpressionUtil::JoinAnnotatedExprs(op->non_simd_predicates_),
+      op->table_alias, op->table_);
+
   output_plan_.reset(new planner::SeqScanPlan(
       storage::StorageManager::GetInstance()->GetTableWithOid(
           op->table_->GetDatabaseOid(), op->table_->GetTableOid()),
-      predicate.release(), column_ids));
+      predicate.release(), column_ids, false, &simd_predicates,
+      non_simd_predicate.release()));
 }
 
 void PlanGenerator::Visit(const PhysicalIndexScan *op) {
@@ -453,8 +468,8 @@ void PlanGenerator::BuildProjectionPlan() {
 
 void PlanGenerator::BuildAggregatePlan(
     AggregateType aggr_type,
-    const std::vector<std::shared_ptr<expression::AbstractExpression>>
-        *groupby_cols,
+    const std::vector<std::shared_ptr<expression::AbstractExpression>> *
+        groupby_cols,
     std::unique_ptr<expression::AbstractExpression> having_predicate) {
   vector<planner::AggregatePlan::AggTerm> aggr_terms;
   vector<catalog::Column> output_schema_columns;
