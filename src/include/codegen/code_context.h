@@ -109,6 +109,8 @@ class CodeContext {
   // Get the IR Builder
   llvm::IRBuilder<> &GetBuilder() { return *builder_; }
 
+  llvm::IRBuilderBase &GetBuilderBase() { return *builder_base_; }
+
   // Get the data layout
   const llvm::DataLayout &GetDataLayout() const;
 
@@ -130,6 +132,7 @@ class CodeContext {
 
   // The LLVM IR Builder
   std::unique_ptr<llvm::IRBuilder<>> builder_;
+  std::unique_ptr<llvm::IRBuilderBase> builder_base_;
 
   // The function that is currently being generated
   FunctionBuilder *func_;

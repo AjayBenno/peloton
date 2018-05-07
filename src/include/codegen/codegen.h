@@ -53,6 +53,7 @@ class CodeGen {
 
   /// We forward the -> operator to LLVM's IRBuilder
   llvm::IRBuilder<> *operator->() { return &GetBuilder(); }
+  llvm::IRBuilderBase *MaskedIntrinsics() { return &GetBuilderBase(); }
 
   /// Type wrappers
   llvm::Type *BoolType() const { return code_context_.bool_type_; }
@@ -156,6 +157,8 @@ class CodeGen {
 
   // Get the LLVM IR Builder (also accessible through the -> operator overload)
   llvm::IRBuilder<> &GetBuilder() const { return code_context_.GetBuilder(); }
+
+  llvm::IRBuilderBase &GetBuilderBase() const { return code_context_.GetBuilderBase(); }
 
  private:
   // The context/module where all the code this class produces goes
