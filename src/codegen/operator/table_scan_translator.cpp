@@ -273,6 +273,7 @@ void TableScanTranslator::ScanConsumer::FilterRowsByPredicate(
 
       llvm::Value *lhs = nullptr;
       llvm::Value *rhs = nullptr;
+      llvm::Value *tempInsert[N];
 
       auto *lch = simd_predicate->GetChild(0);
       auto *rch = simd_predicate->GetChild(1);
@@ -301,8 +302,10 @@ void TableScanTranslator::ScanConsumer::FilterRowsByPredicate(
               batch.GetRowAt(codegen->CreateAdd(ins.start, codegen.Const32(i)));
           codegen::Value eval_row = row.DeriveValue(codegen, *lch);
           llvm::Value *ins_val = eval_row.CastTo(codegen, cast_lch).GetValue();
-          lhs = codegen->CreateInsertElement(lhs, ins_val, i);
+          tempInsert[i]=ins_val;
         }
+        lhs = codegen->CreateMaskedGather(tempInsert,0,nullptr);
+        //Insert CreateMaskedGather here. 
       }
 
       if (dynamic_cast<const expression::ConstantValueExpression *>(rch) !=
