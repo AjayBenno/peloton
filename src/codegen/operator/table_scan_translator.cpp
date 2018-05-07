@@ -304,7 +304,7 @@ void TableScanTranslator::ScanConsumer::FilterRowsByPredicate(
           llvm::Value *ins_val = eval_row.CastTo(codegen, cast_lch).GetValue();
           tempInsert[i]=ins_val;
         }
-        lhs = codegen.MaskedIntrinsics().CreateMaskedGather(tempInsert,0,nullptr,nullptr,"");
+        lhs = codegen.MaskedIntrinsics()->CreateMaskedGather(tempInsert,0,nullptr,nullptr,"");
         //Insert CreateMaskedGather here. 
       }
 
