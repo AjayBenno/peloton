@@ -318,14 +318,16 @@ void TableScanTranslator::ScanConsumer::FilterRowsByPredicate(
         llvm::Value *ins_val = eval_row.CastTo(codegen, cast_rch).GetValue();
         rhs = codegen->CreateVectorSplat(N, ins_val);
       } else {
-        rhs = llvm::UndefValue::get(llvm::VectorType::get(typ_lhs, N));
+        rhs = llvm::UndefValue::get(llvm::VectorType::get(typ_rhs, N));
+        tempPtr = llvm::UndefValue::get(llvm::VectorType::get(llvm::PointerType::get(typ_rhs,0), N));
         for (uint32_t i = 0; i < N; ++i) {
           RowBatch::Row row =
               batch.GetRowAt(codegen->CreateAdd(ins.start, codegen.Const32(i)));
           codegen::Value eval_row = row.DeriveValue(codegen, *rch);
           llvm::Value *ins_val = eval_row.CastTo(codegen, cast_rch).GetValue();
-          rhs = codegen->CreateInsertElement(rhs, ins_val, i);
+          tempPtr = codegen->CreateInsertElement(tempPtr,ins_val,i);
         }
+        rhs = codegen.MaskedIntrinsics()->CreateMaskedGather(tempPtr,0,nullptr,nullptr,"");
       }
 
       codegen::Value val_lhs(cast_lch, lhs);
