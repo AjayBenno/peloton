@@ -92,6 +92,26 @@ bool RowBatch::Row::HasAttribute(const planner::AttributeInfo *ai) const {
          batch_.GetAttributes().find(ai) != batch_.GetAttributes().end();
 }
 
+  codegen::Value RowBatch::Row::DeriveValuePtr(CodeGen &codegen,
+                                            const planner::AttributeInfo *ai) {
+    // First check cache
+    auto cache_iter = cache_.find(ai);
+    if (cache_iter != cache_.end()) {
+      return &cache_iter->second;
+    }
+
+    // Not in cache, derive it using an accessor
+    auto accessor_iter = batch_.GetAttributes().find(ai);
+    if (accessor_iter != batch_.GetAttributes().end()) {
+      auto *accessor = accessor_iter->second;
+      auto ret = accessor->Access(codegen, *this);
+      cache_.insert(std::make_pair(ai, ret));
+      return &ret;
+    }
+
+    // Not in cache, not an attribute in this row ... crap out
+    throw Exception{"Attribute '" + ai->name + "' is not an available attribute"};
+  }
 codegen::Value RowBatch::Row::DeriveValue(CodeGen &codegen,
                                           const planner::AttributeInfo *ai) {
   // First check cache
