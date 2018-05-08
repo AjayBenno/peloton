@@ -300,7 +300,7 @@ void TableScanTranslator::ScanConsumer::FilterRowsByPredicate(
         lhs = codegen->CreateVectorSplat(N, ins_val);
       } else {
         lhs = llvm::UndefValue::get(llvm::VectorType::get(typ_lhs, N));
-        tempPtr = llvm::UndefValue::get(llvm::VectorType::get(llvm::PointerType::get(typ_lhs), N));
+        tempPtr = llvm::UndefValue::get(llvm::VectorType::get(llvm::PointerType::get(typ_lhs,0), N));
         for (uint32_t i = 0; i < N; ++i) {
           RowBatch::Row row =
               batch.GetRowAt(codegen->CreateAdd(ins.start, codegen.Const32(i)));
