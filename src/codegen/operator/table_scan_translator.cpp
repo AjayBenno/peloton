@@ -284,7 +284,6 @@ void TableScanTranslator::ScanConsumer::FilterRowsByPredicate(
       auto cast_lch = typ_lch;
       auto cast_rch = typ_rch;
 
-      auto cast_pointer = codegen.CharPtrType();
 
       type::TypeSystem::GetComparison(typ_lch, cast_lch, typ_rch, cast_rch);
 
