@@ -273,7 +273,7 @@ void TableScanTranslator::ScanConsumer::FilterRowsByPredicate(
 
       llvm::Value *lhs = nullptr;
       llvm::Value *rhs = nullptr;
-      llvm::Value *tempInsert[N];
+      llvm::Value *tempPtr = nullptr;
 
       auto *lch = simd_predicate->GetChild(0);
       auto *rch = simd_predicate->GetChild(1);
@@ -283,6 +283,9 @@ void TableScanTranslator::ScanConsumer::FilterRowsByPredicate(
 
       auto cast_lch = typ_lch;
       auto cast_rch = typ_rch;
+
+      auto cast_pointer = codegen.CharPtrType();
+
       type::TypeSystem::GetComparison(typ_lch, cast_lch, typ_rch, cast_rch);
 
       llvm::Type *dummy, *typ_lhs, *typ_rhs;
@@ -297,14 +300,15 @@ void TableScanTranslator::ScanConsumer::FilterRowsByPredicate(
         lhs = codegen->CreateVectorSplat(N, ins_val);
       } else {
         lhs = llvm::UndefValue::get(llvm::VectorType::get(typ_lhs, N));
+        tempPtr = llvm::UndefValue::get(llvm::VectorType::get(cast_pointer, N));
         for (uint32_t i = 0; i < N; ++i) {
           RowBatch::Row row =
               batch.GetRowAt(codegen->CreateAdd(ins.start, codegen.Const32(i)));
           codegen::Value eval_row = row.DeriveValue(codegen, *lch);
           llvm::Value *ins_val = eval_row.CastTo(codegen, cast_lch).GetValue();
-          tempInsert[i]=ins_val;
+          tempPtr = codegen->CreateInsertElement(tempPtr,&ins_val,i);
         }
-        lhs = codegen.MaskedIntrinsics()->CreateMaskedGather(tempInsert,0,nullptr,nullptr,"");
+        lhs = codegen.MaskedIntrinsics()->CreateMaskedGather(tempPtr,0,nullptr,nullptr,"");
         //Insert CreateMaskedGather here. 
       }
 
